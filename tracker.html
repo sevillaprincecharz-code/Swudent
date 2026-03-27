@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Tracker</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+
+<header>
+    <div class="header-content">
+        <h1>Swudents</h1>
+        <p>Student Tracker System</p>
+    </div>
+
+    <div class="header-logo-container">
+        <img src="logo.png" alt="Swudents Cobra Logo" class="header-logo">
+    </div>
+</header>
+
+
+<nav>
+<a href="index.html">Home</a>
+<a href="dashboard.html" class="active">Dashboard</a>
+<a href="tracker.html">Tracker</a>
+<a href="about.html">About</a>
+<a href="contact.html">Contact</a>
+</nav>
+
+<main>
+
+<section>
+    <h2>Add Task</h2>
+
+    <form onsubmit="addTask(event)">
+        <label>Task Name:</label>
+        <input type="text" id="taskName" placeholder="Enter task" required>
+
+        <label>Description:</label>
+        <textarea id="taskDesc" placeholder="Enter description"></textarea>
+
+        <label>Priority:</label>
+        <select id="taskPriority">
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+        </select>
+
+        <button type="submit">Add Task</button>
+    </form>
+</section>
+
+<section>
+    <h2>Task List</h2>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Task</th>
+                <th>Description</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="taskTable">
+        </tbody>
+    </table>
+
+</section>
+
+</main>
+
+<footer>
+    © Group 8, 2026 Swudents. All rights reserved.
+</footer>
+
+<script>
+let tasks = [];
+
+function addTask(event) {
+    event.preventDefault();
+
+    const name = document.getElementById('taskName').value;
+    const desc = document.getElementById('taskDesc').value;
+    const priority = document.getElementById('taskPriority').value;
+
+    tasks.push({
+        name: name,
+        desc: desc,
+        priority: priority,
+        status: "Pending"
+    });
+
+    renderTasks();
+    event.target.reset();
+}
+
+function renderTasks() {
+    const table = document.getElementById('taskTable');
+    table.innerHTML = '';
+
+    if (tasks.length === 0) {
+        table.innerHTML = '<tr><td colspan="5">No tasks yet</td></tr>';
+        return;
+    }
+
+    tasks.forEach((task, index) => {
+        const row = document.createElement('tr');
+
+        row.innerHTML = `
+            <td>${task.name}</td>
+            <td>${task.desc}</td>
+            <td>${task.priority}</td>
+            <td>${task.status}</td>
+            <td>
+                <button onclick="markDone(${index})">Done</button>
+                <button onclick="deleteTask(${index})" style="background-color:#d62828;">Delete</button>
+            </td>
+        `;
+
+        table.appendChild(row);
+    });
+}
+
+function markDone(index) {
+    tasks[index].status = "Completed";
+    renderTasks();
+}
+
+function deleteTask(index) {
+    tasks.splice(index, 1);
+    renderTasks();
+}
+</script>
+
+</body>
+</html>

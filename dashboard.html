@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swudents - Grade Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+
+<header>
+    <div class="header-content">
+        <h1>Swudents</h1>
+        <p>Student Tracker System</p>
+    </div>
+
+    <div class="header-logo-container">
+        <img src="logo.png" alt="Swudents Cobra Logo" class="header-logo">
+    </div>
+</header>
+
+
+<nav>
+    <a href="index.html">Home</a>
+    <a href="dashboard.html">Dashboard</a>
+    <a href="tracker.html">Tracker</a>
+    <a href="about.html">About</a>
+    <a href="contact.html">Contact</a>
+</nav>
+
+<td class="status">Completed</td>
+
+<main>
+    <!-- Student List Section -->
+    <section>
+        <h2>Grade Tracker</h2>
+        <p>Track and manage student grades (1-100 scale).</p>
+        
+        <button onclick="openAddStudentModal()">+ Add New Student</button>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Grade Level</th>
+                    <th>General Average</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="studentTableBody">
+                <!-- Populated by JavaScript -->
+            </tbody>
+        </table>
+    </section>
+
+    <!-- Add/Edit Student Modal -->
+    <div id="studentModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddStudentModal()">&times;</span>
+            <h2 id="modalTitle">Add New Student</h2>
+            <form id="studentForm" onsubmit="saveStudent(event)">
+                <label>Student ID:</label>
+                <input type="text" id="studentId" placeholder="Enter student ID" required readonly>
+                
+                <label>Name:</label>
+                <input type="text" id="studentName" placeholder="Enter student name" required>
+                
+                <label>Grade Level:</label>
+                <select id="gradeLevel" required>
+                    <option value="">Select Grade Level</option>
+                    <option value="Grade 7">Grade 7</option>
+                    <option value="Grade 8">Grade 8</option>
+                    <option value="Grade 9">Grade 9</option>
+                    <option value="Grade 10">Grade 10</option>
+                    <option value="Grade 11">Grade 11</option>
+                    <option value="Grade 12">Grade 12</option>
+                </select>
+                
+                <button type="submit">Save Student</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Grade Input Section -->
+    <section>
+        <h2>Grade Calculator</h2>
+        <p>Enter grades for subjects and calculate the General Average (1-100 scale).</p>
+        
+        <label>Select Student:</label>
+        <select id="studentSelect" onchange="loadStudentGrades()">
+            <option value="">-- Select student to add grades --</option>
+        </select>
+        
+        <div id="gradeInputs" style="margin-top: 15px;">
+            <!-- Subject inputs populated by JavaScript -->
+        </div>
+        
+        <button id="addSubjectBtn" onclick="addSubject()" style="display: none;">+ Add Subject</button>
+        <button id="calculateBtn" onclick="calculateAverage()" style="display: none;">Calculate General Average</button>
+        <button id="saveGradesBtn" onclick="saveStudentGrades()" style="display: none;">Save Grades</button>
+        
+        <div id="result" style="margin-top: 20px; font-weight: bold;"></div>
+    </section>
+</main>
+
+<footer>
+    &copy; Group 8, 2026 Swudents. All rights reserved.
+</footer>
+
+<style>
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 10% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 400px;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: black;
+}
+
+.subject-input {
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #fff;
+}
+
+.subject-input label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.subject-input input {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+.remove-subject {
+    background-color: #d62828;
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.remove-subject:hover {
+    opacity: 0.9;
+}
+
+select {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0 15px 0;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+}
+</style>
+
+<script>
+let students = [];
+let currentEditingStudentId = null;
+let subjectCount = 1;
+let selectedStudentId = null;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadStudents();
+    populateStudentSelect();
+});
+// Save students to localStorage
+function saveStudentsToStorage() {
+    localStorage.setItem('studentsData', JSON.stringify(students));
+}
+
+// Render student table
+function renderStudentTable() {
+    const tbody = document.getElementById('studentTableBody');
+    tbody.innerHTML = '';
+    
+    if (students.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">No students found. Add one to get started!</td></tr>';
+        return;
+    }
+    
+    students.forEach(student => {
+        const generalAverage = calculateStudentAverage(student.id);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${student.id}</td>
+            <td>${student.name}</td>
+            <td>${student.gradeLevel}</td>
+            <td>${generalAverage ? generalAverage.toFixed(2) : 'N/A'}</td>
+            <td>
+                <button onclick="openEditStudentModal('${student.id}')">Edit</button>
+                <button onclick="deleteStudent('${student.id}')" style="background-color: #d62828;">Delete</button>
+                <button onclick="viewStudentGrades('${student.id}')" style="background-color: #2a9d8f;">Grades</button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Generate unique student ID
+function generateStudentId() {
+    if (students.length === 0) return '001';
+    const ids = students.map(s => parseInt(s.id)).sort((a, b) => b - a);
+    return String(ids[0] + 1).padStart(3, '0');
+}
+
+// Open Add Student Modal
+function openAddStudentModal() {
+    currentEditingStudentId = null;
+    document.getElementById('modalTitle').textContent = 'Add New Student';
+    document.getElementById('studentForm').reset();
+    document.getElementById('studentId').value = generateStudentId();
+    document.getElementById('studentModal').style.display = 'block';
+}
+
+// Open Edit Student Modal
+function openEditStudentModal(studentId) {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+    
+    currentEditingStudentId = studentId;
+    document.getElementById('modalTitle').textContent = 'Edit Student';
+    document.getElementById('studentId').value = student.id;
+    document.getElementById('studentName').value = student.name;
+    document.getElementById('gradeLevel').value = student.gradeLevel;
+    document.getElementById('studentModal').style.display = 'block';
+}
+
+// Close Modal
+function closeAddStudentModal() {
+    document.getElementById('studentModal').style.display = 'none';
+    currentEditingStudentId = null;
+}
+
+// Save Student
+function saveStudent(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('studentId').value;
+    const name = document.getElementById('studentName').value;
+    const gradeLevel = document.getElementById('gradeLevel').value;
+    
+    if (currentEditingStudentId) {
+        // Edit existing student
+        const student = students.find(s => s.id === currentEditingStudentId);
+        if (student) {
+            student.name = name;
+            student.gradeLevel = gradeLevel;
+        }
+    } else {
+        // Add new student
+        students.push({
+            id: id,
+            name: name,
+            gradeLevel: gradeLevel
+        });
+    }
+    
+    saveStudentsToStorage();
+    renderStudentTable();
+    populateStudentSelect();
+    closeAddStudentModal();
+}
+
+// Delete Student
+function deleteStudent(studentId) {
+    if (confirm('Are you sure you want to delete this student?')) {
+        students = students.filter(s => s.id !== studentId);
+        saveStudentsToStorage();
+        renderStudentTable();
+        populateStudentSelect();
+        clearGradeInputs();
+        document.getElementById('result').innerHTML = '';
+    }
+}
+
+// Populate student select dropdown
+function populateStudentSelect() {
+    const select = document.getElementById('studentSelect');
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">-- Select student to add grades --</option>';
+    
+    students.forEach(student => {
+        const option = document.createElement('option');
+        option.value = student.id;
+        option.textContent = `${student.id} - ${student.name}`;
+        select.appendChild(option);
+    });
+    
+    select.value = currentValue;
+}
+
+// Load student grades
+function loadStudentGrades() {
+    const studentId = document.getElementById('studentSelect').value;
+    selectedStudentId = studentId;
+    
+    if (!studentId) {
+        clearGradeInputs();
+        document.getElementById('addSubjectBtn').style.display = 'none';
+        document.getElementById('calculateBtn').style.display = 'none';
+        document.getElementById('saveGradesBtn').style.display = 'none';
+        return;
+    }
+    
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+    
+    subjectCount = 1;
+    clearGradeInputs();
+    
+    if (student.grades && student.grades.length > 0) {
+        student.grades.forEach((grade, index) => {
+            if (index === 0) {
+                document.getElementById('subjectName1').value = grade.subject;
+                document.getElementById('subject1').value = grade.grade;
+            } else {
+                addSubject();
+                document.getElementById('subjectName' + subjectCount).value = grade.subject;
+                document.getElementById('subject' + subjectCount).value = grade.grade;
+            }
+        });
+    }
+    
+    document.getElementById('addSubjectBtn').style.display = 'inline-block';
+    document.getElementById('calculateBtn').style.display = 'inline-block';
+    document.getElementById('saveGradesBtn').style.display = 'inline-block';
+    document.getElementById('result').innerHTML = '';
+}
+
+// Clear grade inputs
+function clearGradeInputs() {
+    document.getElementById('gradeInputs').innerHTML = `
+        <div class="subject-input">
+            <label>Subject Name:</label>
+            <input type="text" id="subjectName1" placeholder="Enter subject name">
+            <label>Grade:</label>
+            <input type="number" id="subject1" min="1" max="100" placeholder="Enter grade (1-100)">
+        </div>
+    `;
+    subjectCount = 1;
+}
+
+// Add subject input
+function addSubject() {
+    subjectCount++;
+    let newDiv = document.createElement('div');
+    newDiv.className = 'subject-input';
+    newDiv.id = 'subject-input-' + subjectCount;
+    newDiv.innerHTML = `
+        <label>Subject Name:</label>
+        <input type="text" id="subjectName${subjectCount}" placeholder="Enter subject name">
+        <label>Grade:</label>
+        <input type="number" id="subject${subjectCount}" min="1" max="100" placeholder="Enter grade (1-100)">;>
+        <button type="button" class="remove-subject" onclick="removeSubject(${subjectCount})">Remove Subject</button>
+    `;
+    document.getElementById('gradeInputs').appendChild(newDiv);
+}
+
+// Remove subject input
+function removeSubject(index) {
+    const element = document.getElementById('subject-input-' + index);
+    if (element) {
+        element.remove();
+    }
+}
+
+// Calculate average
+function calculateAverage() {
+    let total = 0;
+    let count = 0;
+    for (let i = 1; i <= subjectCount; i++) {
+        let gradeInput = document.getElementById('subject' + i);
+        if (gradeInput) {
+            let grade = gradeInput.value;
+            if (grade && !isNaN(grade)) {
+                total += parseFloat(grade);
+                count++;
+            }
+        }
+    }
+    if (count > 0) {
+        let average = total / count;
+        document.getElementById('result').innerHTML = `<span style="color: green;">General Average: ${average.toFixed(2)}</span>`;
+    } else {
+        document.getElementById('result').innerHTML = '<span style="color: red;">Please enter at least one grade.</span>';
+    }
+}
+
+// Save student grades
+function saveStudentGrades() {
+    if (!selectedStudentId) {
+        alert('Please select a student first.');
+        return;
+    }
+    
+    const student = students.find(s => s.id === selectedStudentId);
+    if (!student) return;
+    
+    const grades = [];
+    for (let i = 1; i <= subjectCount; i++) {
+        const subjectName = document.getElementById('subjectName' + i).value;
+        const grade = document.getElementById('subject' + i).value;
+        
+        if (subjectName && grade && !isNaN(grade)) {
+            grades.push({
+                subject: subjectName,
+                grade: parseFloat(grade)
+            });
+        }
+    }
+    
+    if (grades.length === 0) {
+        alert('Please enter at least one subject with a grade.');
+        return;
+    }
+    
+    student.grades = grades;
+    saveStudentsToStorage();
+    renderStudentTable();
+    alert('Grades saved successfully!');
+    document.getElementById('result').innerHTML = '';
+}
+
+// View student grades
+function viewStudentGrades(studentId) {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+    
+    if (!student.grades || student.grades.length === 0) {
+        alert(`No grades found for ${student.name}.`);
+        return;
+    }
+    
+    document.getElementById('studentSelect').value = studentId;
+    loadStudentGrades();
+}
+
+// Calculate student's general average
+function calculateStudentAverage(studentId) {
+    const student = students.find(s => s.id === studentId);
+    if (!student || !student.grades || student.grades.length === 0) {
+        return null;
+    }
+    
+    const total = student.grades.reduce((sum, grade) => sum + grade.grade, 0);
+    return total / student.grades.length;
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('studentModal');
+    if (event.target === modal) {
+        modal.style.display = 'none';
+    }
+}
+</script>
+
+</body>
+</html>
